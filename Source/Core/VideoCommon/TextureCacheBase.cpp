@@ -1270,7 +1270,12 @@ TCacheEntry* TextureCacheBase::LoadImpl(u32 stage, bool force_reload)
     //
     // Spyro: A Hero's Tail is known for (deliberately?) using such overwritten textures
     // in it's bloom effect, which breaks without giving it the invalidated texture.
-    if (TMEM::IsCached(stage))
+    // A zero safe-cache sample size requests a complete texture hash. In
+    // that mode, do not skip the hash just because the TMEM heuristic says
+    // the old texture should still be resident. Some games rewrite a
+    // texture in RAM without issuing a TMEM invalidate; rechecking the hash
+    // is needed for those titles (for example Taiko no Tatsujin Wii).
+    if (TMEM::IsCached(stage) && g_ActiveConfig.iSafeTextureCache_ColorSamples != 0)
     {
       return entry;
     }

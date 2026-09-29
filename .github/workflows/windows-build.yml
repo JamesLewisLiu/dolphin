@@ -1,0 +1,64 @@
+name: Windows build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [actions]
+    paths:
+      - 'CMakeLists.txt'
+      - 'CMake/**'
+      - 'Source/**'
+      - 'Data/**'
+      - '.github/workflows/windows-build.yml'
+  pull_request:
+    paths:
+      - 'CMakeLists.txt'
+      - 'CMake/**'
+      - 'Source/**'
+      - 'Data/**'
+      - '.github/workflows/windows-build.yml'
+
+jobs:
+  build-windows-x64:
+    name: Windows x64 (Release)
+    runs-on: windows-2025
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out source and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Configure MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure CMake
+        shell: pwsh
+        run: >-
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          -DCMAKE_CONFIGURATION_TYPES=Release
+          -DARCH=x86_64
+          -DENABLE_TESTS=OFF
+          -DENABLE_AUTOUPDATE=OFF
+          -DUSE_SYSTEM_LIBS=OFF
+          -DDISTRIBUTOR=actions
+
+      - name: Build Dolphin
+        shell: pwsh
+        run: cmake --build build --config Release --target dolphin-emu --parallel 2
+
+      - name: Install build artifact
+        shell: pwsh
+        run: cmake --install build --config Release --prefix "$env:GITHUB_WORKSPACE\package"
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dolphin-windows-x64-${{ github.sha }}
+          path: package/
+          if-no-files-found: error
+          retention-days: 14
